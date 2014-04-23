@@ -42,7 +42,8 @@ struct Property {
     byte readWritePermissions;
     bool pendingSave;
     bool eepromSave;
-    void (*callback)(unsigned short, unsigned short);
+    bool callbackOnChange;
+    Callback *callback;
 };
 
 struct Sensor {
@@ -114,6 +115,7 @@ void ModeoBLE::registerProperty(byte identifier, bool eepromSave) {
         _properties[_propertiesLength].readWritePermissions = 0;
         _properties[_propertiesLength].pendingSave = false;
         _properties[_propertiesLength].eepromSave = eepromSave;
+        _properties[_propertiesLength].callbackOnChange = false;
         
         _propertiesLength++;
         
@@ -124,10 +126,25 @@ void ModeoBLE::registerProperty(byte identifier, bool eepromSave) {
     }
 }
 
-/*
-void ModeoBLE::registerPropertyWithCallback(byte identifier, byte readWritePermissions, void (*callback)(unsigned short, unsigned short)) {
-    
-}*/
+void ModeoBLE::registerPropertyWithCallback(byte identifier, bool eepromSave, Callback *callback) {
+    if (indexForProperty(identifier) == -1) {
+        _properties[_propertiesLength].identifier = identifier;
+        _properties[_propertiesLength].readWritePermissions = 0;
+        _properties[_propertiesLength].pendingSave = false;
+        _properties[_propertiesLength].eepromSave = eepromSave;
+        _properties[_propertiesLength].callback = callback;
+        _properties[_propertiesLength].callbackOnChange = true;
+        
+        (*_properties[_propertiesLength].callback)(0,0);
+        
+        _propertiesLength++;
+        
+        Serial.println("Property registered with callback.");
+    }
+    else {
+        Serial.println("Property has already been registered with callback.");
+    }
+}
 
 void ModeoBLE::setValueForProperty(unsigned short value, byte identifier) {
     Serial.println("Set Value");
@@ -402,16 +419,17 @@ void ModeoBLE::writeGetProperty() {
 void ModeoBLE::setProperty() {
     if ( _bleMini.available() >= 1) {
         byte headerSize = 2;
+        byte dataSize = 3;
         byte numProperties = _bleMini.read();
-        byte numBytes = numProperties * 3;
-        previousWriteRequestLength = 2 + numBytes;
+        byte numBytes = numProperties * dataSize;
+        previousWriteRequestLength = headerSize + numBytes;
         
         if (_bleMini.available() >= numBytes) {
             
             previousWriteRequest[0] = REQUEST_SET_PROPERTY;
             previousWriteRequest[1] = numProperties;
-            for (byte i = 0; i < numBytes; i++) {
-                previousWriteRequest[i + 3] = _bleMini.read();
+            for (byte i = headerSize; i < numBytes; i++) {
+                previousWriteRequest[i] = _bleMini.read();
             }
             
             for (byte i = 0; i < previousWriteRequestLength; i++) {
@@ -440,8 +458,13 @@ void ModeoBLE::writeProperty() {
         unsigned short value = (data2 << 8) + data1;
         
         if (propertyIdentifier < _numProperties) {
+            unsigned short oldValue = _properties[propertyIdentifier].value;
             _properties[propertyIdentifier].value = value;
             _properties[propertyIdentifier].pendingSave = true;
+            
+            if (_properties[propertyIdentifier].callbackOnChange) {
+                (*_properties[propertyIdentifier].callback)(oldValue, value);
+            }
         }
         else {
             success = false;

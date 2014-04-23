@@ -26,6 +26,8 @@ struct Bezier {
     byte maxY;
 };
 
+typedef void (Callback) (unsigned short, unsigned short);
+
 class ModeoBLE {
     
     public:
@@ -37,7 +39,7 @@ class ModeoBLE {
     void update();
     
     void registerProperty(byte identifier, bool eepromSave);
-    //void registerPropertyWithCallback(byte identifier, byte readWritePermissions, void (*callback)(unsigned short, unsigned short));
+    void registerPropertyWithCallback(byte identifier, bool eepromSave, Callback *callback);
     void setValueForProperty(unsigned short value, byte propertyId);
     unsigned short getValueForProperty(byte identifier);
     
