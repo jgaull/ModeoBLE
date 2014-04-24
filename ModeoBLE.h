@@ -11,28 +11,13 @@
 
 #define RESOLUTION 10
 
-struct point {
-    byte x;
-    byte y;
-};
-
-struct Bezier {
-    byte identifier;
-    byte numPoints;
-    point points[4];
-    point cache[RESOLUTION];
-    boolean cacheIsValid;
-    byte maxX;
-    byte maxY;
-};
-
 typedef void (Callback) (unsigned short, unsigned short);
 
 class ModeoBLE {
     
     public:
     
-    ModeoBLE(byte numProperties, byte numSensors, byte numBeziers);
+    ModeoBLE(byte numProperties, byte numSensors);
     
     void startup();
     void shutdown();
@@ -47,8 +32,8 @@ class ModeoBLE {
     void setValueForSensor(unsigned short value, byte identifier);
     unsigned short getValueForSensor(byte identifier);
     
-    void registerBezier(byte identifier);
-    Bezier getBezier(byte identifier);
+    //void registerBezier(byte identifier);
+    //Bezier getBezier(byte identifier);
     
     void clearEEPROM();
     void saveValueForProperty(unsigned short value, byte identifier);
@@ -66,8 +51,8 @@ class ModeoBLE {
     void writeGetProperty();
     void clearBLEBuffer();
     void getSensorValue();
-    void addBezier();
-    void writeBezier();
+    //void addBezier();
+    //void writeBezier();
     void setProperty();
     void writeProperty();
     
