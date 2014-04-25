@@ -255,7 +255,7 @@ void ModeoBLE::saveValueForProperty(unsigned short value, byte identifier) {
 }
 
 void ModeoBLE::clearEEPROM() {
-    Serial.println("Clear EEPROM");
+    Serial.println("Clear EEPROM not hooked up.");
 }
 
 //Private in-yer-face
@@ -382,11 +382,13 @@ void ModeoBLE::getPropertyValue() {
     if ( _bleMini.available() >= 1) {
         byte propertyIdentifier = _bleMini.read();
         
-        if ( propertyIdentifier < _numProperties) {
+        int index = indexForProperty(propertyIdentifier);
+        
+        if ( index != -1) {
             _bleMini.write(REQUEST_GET_PROPERTY_VALUE);
             _bleMini.write(propertyIdentifier);
-            _bleMini.write(_properties[propertyIdentifier].value);
-            _bleMini.write(_properties[propertyIdentifier].value >> 8);
+            _bleMini.write(_properties[index].value);
+            _bleMini.write(_properties[index].value >> 8);
         }
         else {
             clearBLEBuffer();
@@ -404,7 +406,9 @@ void ModeoBLE::writeGetProperty() {
         byte data2 = _bleMini.read();
         unsigned short value = (data2 << 8) + data1;
         
-        if ( _properties[propertyIdentifier].value == value ) {
+        int index = indexForProperty(propertyIdentifier);
+        
+        if ( _properties[index].value == value ) {
             _bleMini.write(REQUEST_WRITE_GET_PROPERTY);
             _bleMini.write(1);
         }
@@ -464,6 +468,7 @@ void ModeoBLE::writeProperty() {
         if (index < _numProperties && index != -1) {
             unsigned short oldValue = _properties[index].value;
             _properties[index].value = value;
+            
             _properties[index].pendingSave = true;
             
             if (_properties[index].callbackOnChange) {
@@ -637,6 +642,7 @@ void ModeoBLE::storeCalibrations() {
             int msb = i * 2;
             EEPROM.write(msb, _properties[i].value >> 8);
             EEPROM.write(lsb, _properties[i].value);
+            _properties[i].pendingSave = false;
             
             propertyCount++;
         }
