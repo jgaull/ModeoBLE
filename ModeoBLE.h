@@ -11,7 +11,7 @@
 
 #define RESOLUTION 10
 
-typedef void (Callback) (unsigned short, unsigned short);
+typedef void (Callback) (byte length, byte value[]);
 
 class ModeoBLE {
     

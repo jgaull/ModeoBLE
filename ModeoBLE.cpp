@@ -52,10 +52,10 @@ struct Sensor {
     unsigned short value;
 };
 
-byte _values[128];
+byte _values[64];
 byte _valuesLength = 0;
 
-Property _properties[20];
+Property _properties[10];
 byte _propertiesLength = 0;
 byte _numProperties = 0;
 Property _propertyPendingSave;
@@ -564,7 +564,13 @@ void ModeoBLE::writeProperty() {
     }
     
     if (_properties[index].callbackOnChange) {
-        (*_properties[index].callback)(0, 0);
+        byte value[valueSize];
+        
+        for (byte i = 0; i < valueSize; i++) {
+            value[i] = _values[i + valueIndex];
+        }
+        
+        (*_properties[index].callback)(valueSize, value);
     }
     
     _bleMini.write(REQUEST_WRITE_PROPERTY);
