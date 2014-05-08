@@ -153,27 +153,57 @@ void ModeoBLE::registerPropertyWithCallback(byte identifier, byte size, bool eep
     }
 }
 
-void ModeoBLE::setUnsignedShortValueForProperty(unsigned short value, byte identifier) {
-    Serial.println("Set Value");
+
+void ModeoBLE::getValueForProperty(byte identifier, byte *length, byte data[]) {
+    //Serial.println("Get Value");
     
     int index = indexForProperty(identifier);
     if (index != -1) {
+        *length = _properties[index].valueSize;
+        byte firstIndex = _properties[index].valueIndex;
         
-        unsigned short oldValue = getUnsignedShortValueForProperty(identifier);
-        if (oldValue != value) {
-            byte valueIndex = _properties[index].valueIndex;
-            _values[valueIndex] = value;
-            _values[valueIndex + 1] = value << 8;
+        for (int i = 0; i < *(length); i++) {
+            data[i] = _values[i + firstIndex];
         }
     }
 }
 
-unsigned short ModeoBLE::getUnsignedShortValueForProperty(byte identifier) {
+void ModeoBLE::setValueForProperty(byte identifier, byte data[]) {
+    //Serial.println("Set Value");
+    
     int index = indexForProperty(identifier);
     if (index != -1) {
-        byte valueIndex = _properties[index].valueIndex;
+        byte length = _properties[index].valueSize;
+        byte firstIndex = _properties[index].valueIndex;
         
-        unsigned short value = (_values[valueIndex + 1] << 8) + _values[valueIndex];
+        for (byte i = 0; i < length; i++) {
+            if (_values[i + firstIndex] != data[i]) {
+                _values[i + firstIndex] = data[i];
+                _properties[index].pendingSave = true;
+            }
+        }
+    }
+}
+
+void ModeoBLE::setUnsignedShortValueForProperty(unsigned short value, byte identifier) {
+    byte data[2];
+    data[0] = value;
+    data[1] = value >> 8;
+    setValueForProperty(identifier, data);
+}
+
+unsigned short ModeoBLE::getUnsignedShortValueForProperty(byte identifier) {
+    //It sucks to have to call indexForProperty here.
+    int index = indexForProperty(identifier);
+    if (index != -1) {
+        //I'm only calling it because I need the length to allocate an array to hold the result.
+        //I'm guessing that this could be done better.
+        byte length = _properties[index].valueSize;
+        byte data[length];
+        
+        getValueForProperty(identifier, &length, data);
+        
+        unsigned short value = (data[1] << 8) + data[0];
         return value;
     }
 }

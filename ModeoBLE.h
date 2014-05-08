@@ -25,6 +25,10 @@ class ModeoBLE {
     
     void registerProperty(byte identifier, byte size, bool eepromSave);
     void registerPropertyWithCallback(byte identifier, byte size, bool eepromSave, Callback *callback);
+    
+    void getValueForProperty(byte identifier, byte *length, byte *data);
+    void setValueForProperty(byte identifier, byte data[]);
+    
     void setUnsignedShortValueForProperty(unsigned short value, byte identifier);
     unsigned short getUnsignedShortValueForProperty(byte identifier);
     
