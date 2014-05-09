@@ -563,6 +563,8 @@ void ModeoBLE::writeProperty() {
         _values[i + valueIndex] = _previousWriteRequest[i + headerSize];
     }
     
+    _properties[index].pendingSave = true;
+    
     if (_properties[index].callbackOnChange) {
         byte value[valueSize];
         
@@ -707,50 +709,65 @@ void ModeoBLE::clearBLEBuffer() {
 void ModeoBLE::retrieveCalibrations() {
     
     //Serial.println("Started property restore");
-    /*
+    
     byte propertyCount = 0;
     for (byte i = 0; i < _numProperties; i++) {
-        
         if (_properties[i].eepromSave) {
-            int lsb = i * 2 + 1;
-            int msb = i * 2;
             
-            _properties[i].value = (EEPROM.read(msb) << 8) + EEPROM.read(lsb);
-            _properties[i].pendingSave = false;
+            byte valueSize = _properties[i].valueSize;
+            byte valueIndex = _properties[i].valueIndex;
+            
+            for (byte j = 0; j < valueSize; j++) {
+                byte value = EEPROM.read(valueIndex + j);
+                _values[valueIndex + j] = value;
+            }
             
             propertyCount++;
         }
     }
     
     ///*
-     Serial.print("Restored ");
-     Serial.print(propertyCount);
-     Serial.println(" properties.");
-     //*/
+    Serial.print("Restored ");
+    Serial.print(propertyCount);
+    Serial.println(" properties.");
+    //*/
 }
 
 
 void ModeoBLE::storeCalibrations() {
     //Serial.println("Started property save");
     
-    /*
     byte propertyCount = 0;
-    for (byte i = 0; i < _propertiesLength; i++) {
+    for (byte i = 0; i < _numProperties; i++) {
+        
+        Serial.print("_properties[");
+        Serial.print(i);
+        Serial.print("].eepromSave = ");
+        Serial.println(_properties[i].eepromSave);
+        
+        Serial.print("_properties[");
+        Serial.print(i);
+        Serial.print("].pendingSave = ");
+        Serial.println(_properties[i].pendingSave);
         
         if (_properties[i].eepromSave && _properties[i].pendingSave) {
-            int lsb = i * 2 + 1;
-            int msb = i * 2;
-            EEPROM.write(msb, _properties[i].value >> 8);
-            EEPROM.write(lsb, _properties[i].value);
-            _properties[i].pendingSave = false;
+            
+            byte valueSize = _properties[i].valueSize;
+            byte valueIndex = _properties[i].valueIndex;
+            
+            for (byte j = 0; j < valueSize; j++) {
+                EEPROM.write(valueIndex + j, _values[valueIndex + j]);
+            }
             
             propertyCount++;
+            
+            _properties[i].pendingSave = false;
         }
     }
     
     ///*
-     Serial.print("Saved ");
-     Serial.print(propertyCount);
-     Serial.println(" properties.");
-     //*/
+    Serial.print("Saved ");
+    Serial.print(propertyCount);
+    Serial.println(" properties.");
+    //*/
 }
