@@ -55,18 +55,13 @@ Sensor _sensors[9];
 byte _sensorsLength = 0;
 byte _numSensors = 0;
 
-//Bezier _beziers[2];
-//byte _beziersLength = 0;
-//byte _numBeziers = 0;
-//Bezier _bezierPendingSave;
-
 byte _previousWriteRequest[20];
 byte _previousWriteRequestLength = 0;
 
 AltSoftSerial _bleMini;
 
-
-byte _lastAvailable = 0;
+byte _availableBytes = 0;
+unsigned int _lastByteReceivedTimestamp = 0;
 
 byte _state = STATE_OFF;
 
@@ -352,12 +347,18 @@ int ModeoBLE::indexForBezier(byte identifier) {
 
 //BLE Shit
 void ModeoBLE::performBluetoothReceive() {
-    byte currentlyAvailable = _bleMini.available();
     
-    if ( currentlyAvailable > 0 && currentlyAvailable == _lastAvailable ) {
+    byte currentlyAvailable = _bleMini.available();
+    if (currentlyAvailable != _availableBytes) {
+        _lastByteReceivedTimestamp = millis();
+        _availableBytes = currentlyAvailable;
+    }
+    
+    int timePassed = millis() - _lastByteReceivedTimestamp;
+    if ( _availableBytes > 0 && timePassed > 50 ) {
         
         //Serial.print("currentlyAvailable = ");
-        //Serial.println(currentlyAvailable);
+        //Serial.println(_availableBytes);
         
         byte identifier = _bleMini.read();
         
@@ -406,10 +407,7 @@ void ModeoBLE::performBluetoothReceive() {
         }
         
         clearBLEBuffer();
-        _lastAvailable = 0;
-    }
-    else {
-        _lastAvailable = currentlyAvailable;
+        _availableBytes = 0;
     }
 }
 
@@ -518,6 +516,7 @@ void ModeoBLE::writeGetProperty() {
 }
 
 void ModeoBLE::setProperty() {
+    
     if ( _bleMini.available() >= 1) {
         byte headerSize = 2;
         byte propertyIdentifier = _bleMini.read();
@@ -540,7 +539,9 @@ void ModeoBLE::setProperty() {
         Serial.println(_bleMini.available());
         //*/
         
-        if (_bleMini.available() >= numBytes) {
+        byte available = _bleMini.available();
+        
+        if (available >= numBytes) {
             
             _previousWriteRequest[0] = REQUEST_SET_PROPERTY;
             _previousWriteRequest[1] = propertyIdentifier;
