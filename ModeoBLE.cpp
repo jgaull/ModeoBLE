@@ -4,25 +4,13 @@
  Copywrite 2013
  */
 
-//Sensors
-#define SENSOR_RIDER_EFFORT 0
-#define SENSOR_CURRENT_STRAIN 1
-#define SENSOR_SPEED 2
-#define SENSOR_RAW_STRAIN 3
-#define SENSOR_TORQUE_APPLIED 4
-#define SENSOR_MOTOR_TEMP 5
-#define SENSOR_BATTERY_VOLTAGE 6
-#define SENSOR_FILTERED_RIDER_EFFORT 7
-
 #define NUM_SENSORS 8 //Is there a better way to do this?
 
 //Request Identifiers
 #define REQUEST_CONNECT 10
 #define REQUEST_DISCONNECT 11
 #define REQUEST_GET_PROPERTY_VALUE 12
-#define REQUEST_ADD_BEZIER 14
 #define REQUEST_GET_SENSOR_VALUE 15
-#define REQUEST_WRITE_BEZIER 17
 #define REQUEST_WRITE_GET_PROPERTY 18
 #define REQUEST_SET_PROPERTY 19
 #define REQUEST_WRITE_PROPERTY 20
@@ -52,16 +40,18 @@ struct Sensor {
     unsigned short value;
 };
 
-byte _values[64];
+//Remember to change this when you add properties!!! I wish I knew more about C++...
+byte _values[32];
 byte _valuesLength = 0;
 
+//And this!!! Temporariliy...
 Property _properties[10];
 byte _propertiesLength = 0;
 byte _numProperties = 0;
 Property _propertyPendingSave;
 byte _propertyIdentifierForPropertyPendingSave;
 
-Sensor _sensors[8];
+Sensor _sensors[9];
 byte _sensorsLength = 0;
 byte _numSensors = 0;
 
@@ -94,10 +84,19 @@ void ModeoBLE::startup() {
         
         _bleMini.begin(57600);
         _state = STATE_ON;
+        
         Serial.println("ModeoBLE Startup!");
     }
     else {
         Serial.println("Failure at startup.");
+        
+        if (_numProperties != _propertiesLength) {
+            Serial.println("The actual number of properties does not match the expected number.");
+        }
+        
+        if (_numSensors != _sensorsLength) {
+            Serial.println("The actual number of sensors does not match the expected number.");
+        }
     }
 }
 
@@ -126,6 +125,8 @@ void ModeoBLE::registerProperty(byte identifier, byte size, bool eepromSave) {
         _valuesLength += size;
         
         Serial.println("Property Registered.");
+        //Serial.print("_valuesLength = ");
+        //Serial.println(_valuesLength);
     }
     else {
         Serial.println("Property has already been registered");
@@ -205,6 +206,18 @@ unsigned short ModeoBLE::getUnsignedShortValueForProperty(byte identifier) {
         
         unsigned short value = (data[1] << 8) + data[0];
         return value;
+    }
+}
+
+byte ModeoBLE::getByteValueForProperty(byte identifier) {
+    int index = indexForProperty(identifier);
+    if (index != -1) {
+        byte length = _properties[index].valueSize;
+        byte data[length];
+        
+        getValueForProperty(identifier, &length, data);
+        
+        return data[0];
     }
 }
 
@@ -296,12 +309,12 @@ void ModeoBLE::saveValueForProperty(unsigned short value, byte identifier) {
         
         _properties[index].eepromSave = eepromSave;
     }
-}
- */
+}*/
 
+/*
 void ModeoBLE::clearEEPROM() {
     Serial.println("Clear EEPROM not hooked up.");
-}
+}*/
 
 //Private in-yer-face
 int ModeoBLE::indexForProperty(byte identifier) {
@@ -367,19 +380,9 @@ void ModeoBLE::performBluetoothReceive() {
                 getPropertyValue();
                 break;
                 
-            case REQUEST_ADD_BEZIER:
-                Serial.println("bezier");
-                //addBezier();
-                break;
-                
             case REQUEST_GET_SENSOR_VALUE:
                 Serial.println("get sensor value");
                 getSensorValue();
-                break;
-                
-            case REQUEST_WRITE_BEZIER:
-                Serial.println("write bezier");
-                //writeBezier();
                 break;
                 
             case REQUEST_WRITE_GET_PROPERTY:
@@ -398,7 +401,7 @@ void ModeoBLE::performBluetoothReceive() {
                 break;
                 
             default:
-                Serial.print("Uknown command: ");
+                Serial.print("Unknown command: ");
                 Serial.println(identifier);
         }
         
@@ -434,7 +437,7 @@ void ModeoBLE::getPropertyValue() {
         
         Serial.print("index = ");
         Serial.println(index);
-        */
+        //*/
         if ( index != -1) {
             byte valueIndex = _properties[index].valueIndex;
             byte valueSize = _properties[index].valueSize;
@@ -444,9 +447,10 @@ void ModeoBLE::getPropertyValue() {
             
             Serial.print("valueSize = ");
             Serial.println(valueSize);
-            */
+            //*/
             _bleMini.write(REQUEST_GET_PROPERTY_VALUE);
             _bleMini.write(propertyIdentifier);
+            _bleMini.write(valueSize);
             
             for (byte i = 0; i < valueSize; i++) {
                 _bleMini.write(_values[i + valueIndex]);
@@ -481,7 +485,7 @@ void ModeoBLE::writeGetProperty() {
         
         Serial.print("size = ");
         Serial.println(size);
-         */
+        //*/
         
         if (_bleMini.available() >= size) {
             bool valid = true;
@@ -522,6 +526,20 @@ void ModeoBLE::setProperty() {
         byte numBytes = _properties[index].valueSize;
         _previousWriteRequestLength = headerSize + numBytes;
         
+        /*
+        Serial.print("propertyIdentifier = ");
+        Serial.println(propertyIdentifier);
+        
+        Serial.print("index = ");
+        Serial.println(index);
+         
+        Serial.print("numBytes = ");
+        Serial.println(numBytes);
+        
+        Serial.print("available = ");
+        Serial.println(_bleMini.available());
+        //*/
+        
         if (_bleMini.available() >= numBytes) {
             
             _previousWriteRequest[0] = REQUEST_SET_PROPERTY;
@@ -535,10 +553,12 @@ void ModeoBLE::setProperty() {
             }
         }
         else {
+            Serial.println("oops 1");
             clearBLEBuffer();
         }
     }
     else {
+        Serial.println("oops 2");
         clearBLEBuffer();
     }
 }
@@ -740,6 +760,7 @@ void ModeoBLE::storeCalibrations() {
     byte propertyCount = 0;
     for (byte i = 0; i < _numProperties; i++) {
         
+        /*
         Serial.print("_properties[");
         Serial.print(i);
         Serial.print("].eepromSave = ");
@@ -749,6 +770,7 @@ void ModeoBLE::storeCalibrations() {
         Serial.print(i);
         Serial.print("].pendingSave = ");
         Serial.println(_properties[i].pendingSave);
+         */
         
         if (_properties[i].eepromSave && _properties[i].pendingSave) {
             

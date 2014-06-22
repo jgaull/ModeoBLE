@@ -31,6 +31,7 @@ class ModeoBLE {
     
     void setUnsignedShortValueForProperty(unsigned short value, byte identifier);
     unsigned short getUnsignedShortValueForProperty(byte identifier);
+    byte getByteValueForProperty(byte identifier);
     
     void registerSensor(byte identifier);
     void setValueForSensor(unsigned short value, byte identifier);
@@ -39,7 +40,7 @@ class ModeoBLE {
     //void registerBezier(byte identifier);
     //Bezier getBezier(byte identifier);
     
-    void clearEEPROM();
+    //void clearEEPROM();
     //void saveValueForProperty(unsigned short value, byte identifier);
     
     private:
