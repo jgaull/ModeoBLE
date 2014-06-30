@@ -39,7 +39,7 @@ class ModeoBLE {
     //void registerBezier(byte identifier);
     //Bezier getBezier(byte identifier);
     
-    void clearEEPROM();
+    //void clearEEPROM();
     //void saveValueForProperty(unsigned short value, byte identifier);
     
     private:
