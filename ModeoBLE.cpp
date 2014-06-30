@@ -57,13 +57,13 @@ byte _values[32];
 byte _valuesLength = 0;
 
 //And this!!! Temporariliy...
-Property _properties[8];
+Property _properties[10];
 byte _propertiesLength = 0;
 byte _numProperties = 0;
 Property _propertyPendingSave;
 byte _propertyIdentifierForPropertyPendingSave;
 
-Sensor _sensors[8];
+Sensor _sensors[9];
 byte _sensorsLength = 0;
 byte _numSensors = 0;
 
@@ -208,6 +208,16 @@ unsigned short ModeoBLE::getUnsignedShortValueForProperty(byte identifier) {
         
         unsigned short value = (data[1] << 8) + data[0];
         return value;
+    }
+}
+
+byte ModeoBLE::getByteValueForProperty(byte identifier) {
+    int index = indexForProperty(identifier);
+    if (index != -1) {
+        byte length = _properties[index].valueSize;
+        byte data[length];
+        getValueForProperty(identifier, &length, data);
+        return data[0];
     }
 }
 
