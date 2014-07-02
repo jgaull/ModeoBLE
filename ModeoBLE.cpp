@@ -41,11 +41,11 @@ struct Sensor {
 };
 
 //Remember to change this when you add properties!!! I wish I knew more about C++...
-byte _values[32];
+byte _values[45];
 byte _valuesLength = 0;
 
 //And this!!! Temporariliy...
-Property _properties[10];
+Property _properties[9];
 byte _propertiesLength = 0;
 byte _numProperties = 0;
 Property _propertyPendingSave;
@@ -143,6 +143,8 @@ void ModeoBLE::registerPropertyWithCallback(byte identifier, byte size, bool eep
         _valuesLength += size;
         
         Serial.println("Property Registered.");
+        //Serial.print("_valuesLength = ");
+        //Serial.println(_valuesLength);
     }
     else {
         Serial.println("Property has already been registered");
@@ -427,7 +429,7 @@ void ModeoBLE::getPropertyValue() {
         byte propertyIdentifier = _bleMini.read();
         
         int index = indexForProperty(propertyIdentifier);
-        ///*
+        /*
         Serial.print("propertyIdentifier = ");
         Serial.println(propertyIdentifier);
         
@@ -437,13 +439,14 @@ void ModeoBLE::getPropertyValue() {
         if ( index != -1) {
             byte valueIndex = _properties[index].valueIndex;
             byte valueSize = _properties[index].valueSize;
-            ///*
+            /*
             Serial.print("valueIndex = ");
             Serial.println(valueIndex);
             
             Serial.print("valueSize = ");
             Serial.println(valueSize);
             //*/
+            
             _bleMini.write(REQUEST_GET_PROPERTY_VALUE);
             _bleMini.write(propertyIdentifier);
             _bleMini.write(valueSize);
@@ -453,10 +456,12 @@ void ModeoBLE::getPropertyValue() {
             }
         }
         else {
+            Serial.println("oops 2");
             clearBLEBuffer();
         }
     }
     else {
+        Serial.println("oops 1");
         clearBLEBuffer();
     }
 }
@@ -481,6 +486,9 @@ void ModeoBLE::writeGetProperty() {
         
         Serial.print("size = ");
         Serial.println(size);
+        
+        Serial.print("_bleMini.available() = ");
+        Serial.println(_bleMini.available());
         //*/
         
         if (_bleMini.available() >= size) {
@@ -505,10 +513,12 @@ void ModeoBLE::writeGetProperty() {
             }
         }
         else {
+            Serial.println("oops 2");
             clearBLEBuffer();
         }
     }
     else {
+        Serial.println("oops 1");
         clearBLEBuffer();
     }
 }
