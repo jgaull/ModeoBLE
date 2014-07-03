@@ -56,13 +56,14 @@ class ModeoBLE {
     void writeGetProperty();
     void clearBLEBuffer();
     void getSensorValue();
-    //void addBezier();
-    //void writeBezier();
     void setProperty();
     void writeProperty();
+    void setConfig();
+    void writeConfig();
     
     void retrieveCalibrations();
     void storeCalibrations();
+    void loadConfiguration();
     
 };
 
