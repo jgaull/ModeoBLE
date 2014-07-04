@@ -38,7 +38,6 @@ struct Property {
     bool pendingSave;
     bool eepromSave;
     bool callbackOnChange;
-    Callback *callback;
 };
 
 struct Sensor {
@@ -67,6 +66,7 @@ byte _previousWriteRequest[20];
 byte _previousWriteRequestLength = 0;
 
 AltSoftSerial _bleMini;
+Callback *_callback;
 
 byte _availableBytes = 0;
 unsigned int _lastByteReceivedTimestamp = 0;
@@ -77,8 +77,9 @@ ModeoBLE::ModeoBLE() {
     Serial.println("ModeoBLE Constructed.");
 }
 
-void ModeoBLE::startup() {
+void ModeoBLE::startup(Callback *callback) {
     
+    _callback = callback;
     loadConfiguration();
     Serial.println("Configuration loaded");
     
@@ -553,7 +554,7 @@ void ModeoBLE::writeProperty() {
             value[i] = _values[i + valueIndex];
         }
         
-        (*_properties[index].callback)(valueSize, value);
+        (*_callback)(propertyIdentifier, valueSize, value);
     }
     
     _bleMini.write(REQUEST_WRITE_PROPERTY);
@@ -748,12 +749,12 @@ void ModeoBLE::loadConfiguration() {
         if (configType == CONFIG_PROPERTY) {
             //read the property data
             byte size = EEPROM.read(currentIndex);
-            byte callbackOnChange = EEPROM.read(currentIndex + 1);
             byte eepromSave = EEPROM.read(currentIndex + 2);
+            byte callbackOnChange = EEPROM.read(currentIndex + 1);
             currentIndex += 3;
             
             //and register the property
-            registerProperty(identifier, size, eepromSave);
+            registerProperty(identifier, size, eepromSave, callbackOnChange);
             parsedProperties++;
         }
         //if we have a sensor
@@ -770,7 +771,7 @@ void ModeoBLE::loadConfiguration() {
     }
 }
 
-void ModeoBLE::registerProperty(byte identifier, byte size, bool eepromSave) {
+void ModeoBLE::registerProperty(byte identifier, byte size, bool eepromSave, bool callbackOnChange) {
     
     if (indexForProperty(identifier) == -1) {
         _properties[_propertiesLength].identifier = identifier;
@@ -778,7 +779,7 @@ void ModeoBLE::registerProperty(byte identifier, byte size, bool eepromSave) {
         _properties[_propertiesLength].valueIndex = _valuesLength;
         _properties[_propertiesLength].pendingSave = false;
         _properties[_propertiesLength].eepromSave = eepromSave;
-        _properties[_propertiesLength].callbackOnChange = false;
+        _properties[_propertiesLength].callbackOnChange = callbackOnChange;
         
         /*
         Serial.print("_properties[");

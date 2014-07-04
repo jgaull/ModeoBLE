@@ -11,7 +11,7 @@
 
 #define RESOLUTION 10
 
-typedef void (Callback) (byte length, byte value[]);
+typedef void (Callback) (byte propertyIdentifier, byte length, byte value[]);
 
 class ModeoBLE {
     
@@ -19,7 +19,7 @@ class ModeoBLE {
     
     ModeoBLE();
     
-    void startup();
+    void startup(Callback *callback);
     void shutdown();
     void update();
     
@@ -61,7 +61,7 @@ class ModeoBLE {
     void storeCalibrations();
     
     void loadConfiguration();
-    void registerProperty(byte identifier, byte size, bool eepromSave);
+    void registerProperty(byte identifier, byte size, bool eepromSave, bool callbackOnChange);
     void registerSensor(byte identifier);
     
 };
