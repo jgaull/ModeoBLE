@@ -21,6 +21,8 @@
 #define STATE_ON 1
 
 #define FIRST_CONFIG_BYTE 128
+#define CONFIG_PROPERTY 1
+#define CONFIG_SENSOR 2
 
 #include <AltSoftSerial.h>
 #include <EEPROM.h>
@@ -59,6 +61,8 @@ Sensor _sensors[9];
 byte _sensorsLength = 0;
 byte _numSensors = 0;
 
+byte _versionNumber = 0;
+
 byte _previousWriteRequest[20];
 byte _previousWriteRequestLength = 0;
 
@@ -69,14 +73,14 @@ unsigned int _lastByteReceivedTimestamp = 0;
 
 byte _state = STATE_OFF;
 
-ModeoBLE::ModeoBLE(byte numProperties, byte numSensors) {
+ModeoBLE::ModeoBLE() {
     Serial.println("ModeoBLE Constructed.");
-    
-    _numProperties = numProperties;
-    _numSensors = numSensors;
 }
 
 void ModeoBLE::startup() {
+    
+    loadConfiguration();
+    Serial.println("Configuration loaded");
     
     if (_state == STATE_OFF && _numProperties == _propertiesLength && _numSensors == _sensorsLength) {
         retrieveCalibrations();
@@ -97,8 +101,6 @@ void ModeoBLE::startup() {
             Serial.println("The actual number of sensors does not match the expected number.");
         }
     }
-    
-    loadConfiguration();
 }
 
 void ModeoBLE::shutdown() {
@@ -111,52 +113,6 @@ void ModeoBLE::update() {
     //Serial.println("ModeoBLE Update");
     performBluetoothReceive();
 }
-
-void ModeoBLE::registerProperty(byte identifier, byte size, bool eepromSave) {
-    
-    if (indexForProperty(identifier) == -1) {
-        _properties[_propertiesLength].identifier = identifier;
-        _properties[_propertiesLength].valueSize = size;
-        _properties[_propertiesLength].valueIndex = _valuesLength;
-        _properties[_propertiesLength].pendingSave = false;
-        _properties[_propertiesLength].eepromSave = eepromSave;
-        _properties[_propertiesLength].callbackOnChange = false;
-        
-        _propertiesLength++;
-        _valuesLength += size;
-        
-        Serial.println("Property Registered.");
-        //Serial.print("_valuesLength = ");
-        //Serial.println(_valuesLength);
-    }
-    else {
-        Serial.println("Property has already been registered");
-    }
-}
-
-void ModeoBLE::registerPropertyWithCallback(byte identifier, byte size, bool eepromSave, Callback *callback) {
-    
-    if (indexForProperty(identifier) == -1) {
-        _properties[_propertiesLength].identifier = identifier;
-        _properties[_propertiesLength].valueSize = size;
-        _properties[_propertiesLength].valueIndex = _valuesLength;
-        _properties[_propertiesLength].pendingSave = false;
-        _properties[_propertiesLength].eepromSave = eepromSave;
-        _properties[_propertiesLength].callbackOnChange = true;
-        _properties[_propertiesLength].callback = callback;
-        
-        _propertiesLength++;
-        _valuesLength += size;
-        
-        Serial.println("Property Registered.");
-        //Serial.print("_valuesLength = ");
-        //Serial.println(_valuesLength);
-    }
-    else {
-        Serial.println("Property has already been registered");
-    }
-}
-
 
 void ModeoBLE::getValueForProperty(byte identifier, byte *length, byte data[]) {
     //Serial.println("Get Value");
@@ -219,18 +175,6 @@ byte ModeoBLE::getByteValueForProperty(byte identifier) {
         byte data[length];
         getValueForProperty(identifier, &length, data);
         return data[0];
-    }
-}
-
-void ModeoBLE::registerSensor(byte identifier) {
-    if (indexForProperty(identifier) == -1) {
-        _sensors[_sensorsLength].identifier = identifier;
-        _sensors[_sensorsLength].value = 0;
-        _sensorsLength++;
-        Serial.println("Sensor Registered.");
-    }
-    else {
-        Serial.println("Sensor already registered.");
     }
 }
 
@@ -753,11 +697,184 @@ void ModeoBLE::storeCalibrations() {
 }
 
 void ModeoBLE::loadConfiguration() {
-    for (byte i = 0; i < 255; i++) {
+    
+    Serial.println("Loading configuration!");
+    /*
+    for (byte i = 0; i < 50; i++) {
         byte value = EEPROM.read(i + FIRST_CONFIG_BYTE);
         Serial.print("value[");
         Serial.print(i + FIRST_CONFIG_BYTE);
         Serial.print("] = ");
         Serial.println(value);
     }
+     */
+    
+    byte headerSize = 3;
+    //read the configuration header data
+    _versionNumber = EEPROM.read(FIRST_CONFIG_BYTE + 0);
+    _numProperties = EEPROM.read(FIRST_CONFIG_BYTE + 1);
+    _numSensors = EEPROM.read(FIRST_CONFIG_BYTE + 2);
+    
+    /*
+    Serial.print("_versionNumber = ");
+    Serial.println(_versionNumber);
+    Serial.print("_numProperties = ");
+    Serial.println(_numProperties);
+    Serial.print("_numSensors = ");
+    Serial.println(_numSensors);
+     */
+    
+    //setup some variables
+    byte parsedProperties = 0;
+    byte parsedSensors = 0;
+    int currentIndex = headerSize + FIRST_CONFIG_BYTE;
+    
+    //iterate over EEPROM storage until we've loaded everything we need.
+    while ((parsedProperties < _numProperties || parsedSensors < _numSensors) && currentIndex < FIRST_CONFIG_BYTE + 256) {
+        
+        //read the configuration data header.
+        byte configType = EEPROM.read(currentIndex);
+        byte identifier = EEPROM.read(currentIndex + 1);
+        currentIndex += 2;
+        
+        /*
+        Serial.print("configType = ");
+        Serial.println(configType);
+        Serial.print("identifier = ");
+        Serial.println(identifier);
+         */
+         
+        //if we have a property
+        if (configType == CONFIG_PROPERTY) {
+            //read the property data
+            byte size = EEPROM.read(currentIndex);
+            byte callbackOnChange = EEPROM.read(currentIndex + 1);
+            byte eepromSave = EEPROM.read(currentIndex + 2);
+            currentIndex += 3;
+            
+            //and register the property
+            registerProperty(identifier, size, eepromSave);
+            parsedProperties++;
+        }
+        //if we have a sensor
+        else if (configType == CONFIG_SENSOR) {
+            //There's no more data to read (yet). Register the sensor.
+            registerSensor(identifier);
+            parsedSensors++;
+        }
+        
+        /*
+        Serial.print("currentIndex = ");
+        Serial.println(currentIndex);
+         */
+    }
 }
+
+void ModeoBLE::registerProperty(byte identifier, byte size, bool eepromSave) {
+    
+    if (indexForProperty(identifier) == -1) {
+        _properties[_propertiesLength].identifier = identifier;
+        _properties[_propertiesLength].valueSize = size;
+        _properties[_propertiesLength].valueIndex = _valuesLength;
+        _properties[_propertiesLength].pendingSave = false;
+        _properties[_propertiesLength].eepromSave = eepromSave;
+        _properties[_propertiesLength].callbackOnChange = false;
+        
+        /*
+        Serial.print("_properties[");
+        Serial.print(_propertiesLength);
+        Serial.print("].identifier = ");
+        Serial.println(_properties[_propertiesLength].identifier);
+        
+        Serial.print("_properties[");
+        Serial.print(_propertiesLength);
+        Serial.print("].valueSize = ");
+        Serial.println(_properties[_propertiesLength].valueSize);
+        
+        Serial.print("_properties[");
+        Serial.print(_propertiesLength);
+        Serial.print("].valueIndex = ");
+        Serial.println(_properties[_propertiesLength].valueIndex);
+        
+        Serial.print("_properties[");
+        Serial.print(_propertiesLength);
+        Serial.print("].pendingSave = ");
+        Serial.println(_properties[_propertiesLength].pendingSave);
+        
+        Serial.print("_properties[");
+        Serial.print(_propertiesLength);
+        Serial.print("].eepromSave = ");
+        Serial.println(_properties[_propertiesLength].eepromSave);
+        
+        Serial.print("_properties[");
+        Serial.print(_propertiesLength);
+        Serial.print("].callbackOnChange = ");
+        Serial.println(_properties[_propertiesLength].callbackOnChange);
+         */
+        
+        _propertiesLength++;
+        _valuesLength += size;
+        
+        Serial.println("Property Registered.");
+        //Serial.print("_valuesLength = ");
+        //Serial.println(_valuesLength);
+    }
+    else {
+        Serial.println("Property has already been registered");
+    }
+}
+
+/*
+void ModeoBLE::registerPropertyWithCallback(byte identifier, byte size, bool eepromSave, Callback *callback) {
+    
+    if (indexForProperty(identifier) == -1) {
+        _properties[_propertiesLength].identifier = identifier;
+        _properties[_propertiesLength].valueSize = size;
+        _properties[_propertiesLength].valueIndex = _valuesLength;
+        _properties[_propertiesLength].pendingSave = false;
+        _properties[_propertiesLength].eepromSave = eepromSave;
+        _properties[_propertiesLength].callbackOnChange = true;
+        _properties[_propertiesLength].callback = callback;
+        
+        _propertiesLength++;
+        _valuesLength += size;
+        
+        Serial.println("Property Registered.");
+        //Serial.print("_valuesLength = ");
+        //Serial.println(_valuesLength);
+    }
+    else {
+        Serial.println("Property has already been registered");
+    }
+}
+*/
+
+void ModeoBLE::registerSensor(byte identifier) {
+    if (indexForProperty(identifier) == -1) {
+        _sensors[_sensorsLength].identifier = identifier;
+        _sensors[_sensorsLength].value = 0;
+        
+        /*
+        Serial.print("_sensors[");
+        Serial.print(_sensorsLength);
+        Serial.print("].identifier = ");
+        Serial.println(_sensors[_sensorsLength].identifier);
+        
+        Serial.print("_sensors[");
+        Serial.print(_sensorsLength);
+        Serial.print("].value = ");
+        Serial.println(_sensors[_sensorsLength].value);
+         */
+        
+        _sensorsLength++;
+        Serial.println("Sensor Registered.");
+    }
+    else {
+        Serial.println("Sensor already registered.");
+    }
+}
+
+
+
+
+

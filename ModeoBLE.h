@@ -17,14 +17,11 @@ class ModeoBLE {
     
     public:
     
-    ModeoBLE(byte numProperties, byte numSensors);
+    ModeoBLE();
     
     void startup();
     void shutdown();
     void update();
-    
-    void registerProperty(byte identifier, byte size, bool eepromSave);
-    void registerPropertyWithCallback(byte identifier, byte size, bool eepromSave, Callback *callback);
     
     void getValueForProperty(byte identifier, byte *length, byte *data);
     void setValueForProperty(byte identifier, byte data[]);
@@ -33,7 +30,6 @@ class ModeoBLE {
     unsigned short getUnsignedShortValueForProperty(byte identifier);
     byte getByteValueForProperty(byte identifier);
     
-    void registerSensor(byte identifier);
     void setValueForSensor(unsigned short value, byte identifier);
     unsigned short getValueForSensor(byte identifier);
     
@@ -63,7 +59,10 @@ class ModeoBLE {
     
     void retrieveCalibrations();
     void storeCalibrations();
+    
     void loadConfiguration();
+    void registerProperty(byte identifier, byte size, bool eepromSave);
+    void registerSensor(byte identifier);
     
 };
 
