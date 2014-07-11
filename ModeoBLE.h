@@ -61,7 +61,7 @@ class ModeoBLE {
     void storeCalibrations();
     
     void loadConfiguration();
-    void registerProperty(byte identifier, byte size, bool eepromSave, bool callbackOnChange);
+    void registerProperty(byte identifier, byte size, bool eepromSave, bool callbackOnChange, byte value[]);
     void registerSensor(byte identifier);
     
 };
