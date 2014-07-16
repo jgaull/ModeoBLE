@@ -83,7 +83,7 @@ void ModeoBLE::startup(Callback *callback) {
     _bleMini.begin(57600);
     
     loadConfiguration();
-    Serial.println("Configuration loaded");
+    //Serial.println("Configuration loaded");
     
     if (_state == STATE_OFF && _numProperties == _propertiesLength && _numSensors == _sensorsLength) {
         //retrieveCalibrations();
@@ -92,14 +92,17 @@ void ModeoBLE::startup(Callback *callback) {
         Serial.println("ModeoBLE Startup!");
     }
     else {
-        Serial.println("Failure at startup.");
+        //Serial.println("Failure at startup.");
         
         if (_numProperties != _propertiesLength) {
-            Serial.println("The actual number of properties does not match the expected number.");
+            Serial.println("_numProperties does not match _propertiesLength.");
         }
         
         if (_numSensors != _sensorsLength) {
-            Serial.println("The actual number of sensors does not match the expected number.");
+            Serial.print("_numSensors = ");
+            Serial.println(_numSensors);
+            Serial.print("_sensorsLength = ");
+            Serial.println(_sensorsLength);
         }
     }
 }
@@ -451,7 +454,7 @@ void ModeoBLE::writeGetProperty() {
         byte valueIndex = _properties[index].valueIndex;
         byte size = _properties[index].valueSize;
         
-        ///*
+        /*
         Serial.print("propertyIdentifier = ");
         Serial.println(propertyIdentifier);
         
@@ -717,7 +720,7 @@ void ModeoBLE::storeCalibrations() {
 
 void ModeoBLE::loadConfiguration() {
     
-    Serial.println("Loading configuration!");
+    //Serial.println("Loading configuration!");
     /*
     for (byte i = 0; i < 50; i++) {
         byte value = EEPROM.read(i + FIRST_CONFIG_BYTE);
@@ -733,7 +736,7 @@ void ModeoBLE::loadConfiguration() {
     _numProperties = EEPROM.read(FIRST_CONFIG_BYTE + 0);
     _numSensors = EEPROM.read(FIRST_CONFIG_BYTE + 1);
     
-    ///*
+    /*
     Serial.print("_numProperties = ");
     Serial.println(_numProperties);
     Serial.print("_numSensors = ");
@@ -810,38 +813,6 @@ void ModeoBLE::registerProperty(byte identifier, byte size, bool eepromSave, boo
             _values[_valuesLength + i] = datem;
         }
         
-        /*
-        Serial.print("_properties[");
-        Serial.print(_propertiesLength);
-        Serial.print("].identifier = ");
-        Serial.println(_properties[_propertiesLength].identifier);
-        
-        Serial.print("_properties[");
-        Serial.print(_propertiesLength);
-        Serial.print("].valueSize = ");
-        Serial.println(_properties[_propertiesLength].valueSize);
-        
-        Serial.print("_properties[");
-        Serial.print(_propertiesLength);
-        Serial.print("].valueIndex = ");
-        Serial.println(_properties[_propertiesLength].valueIndex);
-        
-        Serial.print("_properties[");
-        Serial.print(_propertiesLength);
-        Serial.print("].pendingSave = ");
-        Serial.println(_properties[_propertiesLength].pendingSave);
-        
-        Serial.print("_properties[");
-        Serial.print(_propertiesLength);
-        Serial.print("].eepromSave = ");
-        Serial.println(_properties[_propertiesLength].eepromSave);
-        
-        Serial.print("_properties[");
-        Serial.print(_propertiesLength);
-        Serial.print("].callbackOnChange = ");
-        Serial.println(_properties[_propertiesLength].callbackOnChange);
-         //*/
-        
         _propertiesLength++;
         _valuesLength += size;
         
@@ -885,24 +856,13 @@ void ModeoBLE::registerSensor(byte identifier) {
     if (indexForSensor(identifier) == -1) {
         _sensors[_sensorsLength].identifier = identifier;
         _sensors[_sensorsLength].value = 0;
-        
-        /*
-        Serial.print("_sensors[");
-        Serial.print(_sensorsLength);
-        Serial.print("].identifier = ");
-        Serial.println(_sensors[_sensorsLength].identifier);
-        
-        Serial.print("_sensors[");
-        Serial.print(_sensorsLength);
-        Serial.print("].value = ");
-        Serial.println(_sensors[_sensorsLength].value);
-         */
-        /*
         _sensorsLength++;
+        
+        /*
         Serial.print("Sensor with identifier ");
         Serial.print(identifier);
         Serial.println(" registered.");
-         */
+         //*/
     }
     else {
         Serial.print("Sensor with identifier ");
