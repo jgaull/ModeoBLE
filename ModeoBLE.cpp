@@ -56,7 +56,7 @@ byte _numProperties = 0;
 Property _propertyPendingSave;
 byte _propertyIdentifierForPropertyPendingSave;
 
-Sensor _sensors[9];
+Sensor _sensors[10];
 byte _sensorsLength = 0;
 byte _numSensors = 0;
 
